@@ -286,16 +286,6 @@ graph TB
 | **UI Framework** | Tailwind CSS + shadcn/ui | Modern design, accessibility |
 | **Data Visualization** | D3.js / Recharts | Privacy-preserving analytics display |
 
-### DevOps & Infrastructure
-
-| Component | Technology | Justification |
-|-----------|-----------|---------------|
-| **Containerization** | Docker | Consistent environments |
-| **Orchestration** | Docker Compose (dev) | Local development simplicity |
-| **CI/CD** | GitHub Actions | Automation, integration with repo |
-| **Testing** | Hardhat, Foundry, Vitest | Smart contract and unit testing |
-| **Monitoring** | Prometheus + Grafana | Metrics, alerting |
-
 ---
 
 ## Implementation Roadmap
