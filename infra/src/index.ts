@@ -7,6 +7,9 @@ import { db } from './database/client';
 import { pinata } from './storage/pinata.service';
 import { blockchain } from './blockchain/client';
 import { EncryptionService } from './encryption/encryption.service';
+import consentRoutes from './api/routes/consent.routes';
+import paymentRoutes from './api/routes/payment.routes';
+import dataRoutes from './api/routes/data.routes';
 
 const app = express();
 
@@ -59,7 +62,7 @@ app.get('/health', async (req: Request, res: Response) => {
     }
 });
 
-// API routes (to be implemented)
+// API routes
 app.get('/api', (req: Request, res: Response) => {
     res.json({
         success: true,
@@ -74,6 +77,11 @@ app.get('/api', (req: Request, res: Response) => {
         },
     });
 });
+
+// Mount API route modules
+app.use('/api/consent', consentRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/data', dataRoutes);
 
 // User routes placeholder
 app.get('/api/users/:walletAddress', async (req: Request, res: Response) => {
