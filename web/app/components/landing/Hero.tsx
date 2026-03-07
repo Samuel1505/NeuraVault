@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import { ArrowRight, ShieldCheck, Zap } from "lucide-react";
+import RoleSelectionModal from "@/app/components/RoleSelectionModal";
 
 const STATS = [
   { value: "2,400+", label: "Data Vaults Created" },
@@ -8,6 +12,8 @@ const STATS = [
 ];
 
 export default function Hero() {
+  const [showModal, setShowModal] = useState(false);
+
   return (
     <section
       style={{
@@ -118,10 +124,14 @@ export default function Hero() {
           className="animate-fade-up animate-fade-up-delay-3"
           style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "5rem" }}
         >
-          <a href="#" className="btn-primary btn-primary-hover" style={{ fontSize: "0.95rem", padding: "0.85rem 2rem" }}>
+          <button
+            onClick={() => setShowModal(true)}
+            className="btn-primary btn-primary-hover"
+            style={{ fontSize: "0.95rem", padding: "0.85rem 2rem" }}
+          >
             Get Started
             <ArrowRight size={16} />
-          </a>
+          </button>
           <a href="#" className="btn-outline btn-outline-hover" style={{ fontSize: "0.95rem", padding: "0.85rem 2rem" }}>
             Read the Docs
           </a>
@@ -220,11 +230,8 @@ export default function Hero() {
         </div>
       </div>
 
-      <style>{`
-        @media (max-width: 768px) {
-          .hero-float-deco { display: none; }
-        }
-      `}</style>
+      {/* Role Selection Modal */}
+      {showModal && <RoleSelectionModal onClose={() => setShowModal(false)} />}
     </section>
   );
 }
