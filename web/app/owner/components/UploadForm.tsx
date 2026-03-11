@@ -3,10 +3,13 @@
 import { useState, useRef, useCallback } from "react";
 import {
   Upload, FileText, CheckCircle, AlertCircle, Loader,
-  Info, Cpu, Clock, DollarSign, ShieldCheck,
+  Info, DollarSign, ShieldCheck, Hash, Users,
 } from "lucide-react";
 import type { BCIUploadForm, BCIType } from "@/types/bci";
 import { uploadFileToPinata, uploadJSONToPinata } from "@/lib/pinata";
+import { saveUploadedRecord } from "@/lib/store";
+import { ETH_USD_RATE } from "@/lib/useBCIStore";
+import { useAccount } from "wagmi";
 
 const BCI_TYPES: BCIType[] = ["EEG", "fMRI", "ECoG", "MEG", "EMG", "fNIRS"];
 
@@ -21,6 +24,9 @@ const DEFAULT_FORM: BCIUploadForm = {
   samplingRate: "",
   duration: "",
   price: "",
+  tags: "",
+  ownerName: "",
+  maxPurchases: "",
   requirements: {
     minEthBalance: "0",
     institutionRequired: false,
@@ -29,7 +35,12 @@ const DEFAULT_FORM: BCIUploadForm = {
   },
 };
 
+function generateId(): string {
+  return `bci-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
 export default function UploadForm() {
+  const { address } = useAccount();
   const [form, setForm] = useState<BCIUploadForm>(DEFAULT_FORM);
   const [dragOver, setDragOver] = useState(false);
   const [uploadState, setUploadState] = useState<UploadState>("idle");
@@ -71,30 +82,74 @@ export default function UploadForm() {
     setErrorMsg("");
 
     try {
+      const ownerAddress = address ?? "0x0000000000000000000000000000000000000000";
+      const ownerName = form.ownerName.trim() || (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Anonymous");
+      const parsedMax = form.maxPurchases.trim() ? parseInt(form.maxPurchases, 10) : undefined;
+      const tags = form.tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+      const priceNum = parseFloat(form.price);
+      const priceUSD = `$${Math.round(priceNum * ETH_USD_RATE).toLocaleString()}`;
+
       // 1. Upload the BCI data file
       const fileRes = await uploadFileToPinata(form.file, {
         title: form.title,
         type: form.type,
-        uploader: "NeuralVault",
+        uploader: ownerAddress,
       });
 
-      // 2. Upload metadata JSON
-      const metaRes = await uploadJSONToPinata(
-        {
-          title: form.title,
-          description: form.description,
-          type: form.type,
-          channels: form.channels,
-          samplingRate: form.samplingRate,
-          duration: form.duration,
-          price: form.price,
-          requirements: form.requirements,
-          dataFileHash: fileRes.IpfsHash,
-          uploadedAt: new Date().toISOString(),
-          platform: "NeuralVault",
-        },
-        `${form.title} — Metadata`
-      );
+      // 2. Build full metadata
+      const metadata = {
+        title: form.title,
+        description: form.description,
+        type: form.type,
+        channels: form.channels,
+        samplingRate: form.samplingRate,
+        duration: form.duration,
+        price: form.price,
+        priceUSD,
+        tags,
+        ownerName,
+        owner: ownerAddress,
+        requirements: form.requirements,
+        dataFileHash: fileRes.IpfsHash,
+        maxPurchases: parsedMax ?? null,
+        uploadedAt: new Date().toISOString(),
+        platform: "NeuralVault",
+      };
+
+      // 3. Upload metadata JSON
+      const metaRes = await uploadJSONToPinata(metadata, `${form.title} — Metadata`);
+
+      const recordId = generateId();
+
+      // 4. Save record to localStorage so researchers see it live
+      saveUploadedRecord({
+        id: recordId,
+        title: form.title,
+        type: form.type as BCIType,
+        description: form.description,
+        longDescription: form.description,
+        dataPoints: 0,
+        duration: form.duration,
+        samplingRate: form.samplingRate,
+        channels: parseInt(form.channels, 10) || 0,
+        price: form.price,
+        priceUSD,
+        owner: ownerAddress,
+        ownerName,
+        requirements: form.requirements,
+        tags,
+        ipfsHash: fileRes.IpfsHash,
+        metaIpfsHash: metaRes.IpfsHash,
+        uploadedAt: new Date().toISOString().split("T")[0],
+        verified: false,
+        downloads: 0,
+        status: "available",
+        maxPurchases: parsedMax,
+        purchaseCount: 0,
+      });
 
       setUploadResult({ fileHash: fileRes.IpfsHash, metaHash: metaRes.IpfsHash });
       setUploadState("success");
@@ -121,13 +176,29 @@ export default function UploadForm() {
             Upload Successful!
           </h2>
           <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>
-            Your dataset is now live on IPFS and published for researchers.
+            Your dataset is now live on IPFS and visible to researchers on the marketplace.
           </p>
         </div>
 
         <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <HashRow label="Data File (IPFS)" hash={uploadResult.fileHash} />
           <HashRow label="Metadata (IPFS)" hash={uploadResult.metaHash} />
+        </div>
+
+        <div
+          style={{
+            width: "100%",
+            padding: "1rem",
+            background: "rgba(34,197,94,0.05)",
+            border: "1px solid rgba(34,197,94,0.2)",
+            borderRadius: "var(--radius-md)",
+            fontSize: "0.82rem",
+            color: "var(--text-secondary)",
+            lineHeight: 1.65,
+            textAlign: "left",
+          }}
+        >
+          <strong style={{ color: "#22c55e" }}>✓ Live on Marketplace</strong> — Researchers can now find, search for, and purchase your dataset. Purchase counts and availability are tracked automatically.
         </div>
 
         <button
@@ -172,7 +243,6 @@ export default function UploadForm() {
             style={{ display: "none" }}
             onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
           />
-
           {form.file ? (
             <>
               <FileText size={32} color="#22c55e" strokeWidth={1.5} />
@@ -199,18 +269,31 @@ export default function UploadForm() {
       {/* ── 2. Metadata ── */}
       <FormSection icon={<FileText size={16} />} title="Dataset Metadata">
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+
           {/* Title */}
           <Field label="Dataset Title" required>
             <input
-              type="text"
-              required
+              type="text" required
               placeholder="e.g. High-Density EEG Motor Cortex Dataset"
               value={form.title}
               onChange={(e) => setField("title", e.target.value)}
-              style={inputStyle}
-              onFocus={focusStyle}
-              onBlur={blurStyle}
+              style={inputStyle} onFocus={focusStyle} onBlur={blurStyle}
             />
+          </Field>
+
+          {/* Owner Name */}
+          <Field label="Your Name / Institution" hint="Displayed to researchers. Defaults to your wallet address.">
+            <div style={{ position: "relative" }}>
+              <Users size={14} style={{ position: "absolute", left: "0.85rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
+              <input
+                type="text"
+                placeholder={address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "e.g. Dr. Jane Smith"}
+                value={form.ownerName}
+                onChange={(e) => setField("ownerName", e.target.value)}
+                style={{ ...inputStyle, paddingLeft: "2.5rem" }}
+                onFocus={focusStyle} onBlur={blurStyle}
+              />
+            </div>
           </Field>
 
           {/* Description */}
@@ -222,8 +305,7 @@ export default function UploadForm() {
               onChange={(e) => setField("description", e.target.value)}
               rows={4}
               style={{ ...inputStyle, resize: "vertical", minHeight: 100 }}
-              onFocus={focusStyle}
-              onBlur={blurStyle}
+              onFocus={focusStyle} onBlur={blurStyle}
             />
           </Field>
 
@@ -235,8 +317,7 @@ export default function UploadForm() {
                 value={form.type}
                 onChange={(e) => setField("type", e.target.value as BCIType)}
                 style={{ ...inputStyle, cursor: "pointer" }}
-                onFocus={focusStyle}
-                onBlur={blurStyle}
+                onFocus={focusStyle} onBlur={blurStyle}
               >
                 <option value="" disabled style={{ background: "var(--bg-surface)" }}>Select type</option>
                 {BCI_TYPES.map((t) => (
@@ -247,15 +328,10 @@ export default function UploadForm() {
 
             <Field label="Number of Channels" required>
               <input
-                type="number"
-                required
-                placeholder="e.g. 256"
-                min={1}
+                type="number" required placeholder="e.g. 256" min={1}
                 value={form.channels}
                 onChange={(e) => setField("channels", e.target.value)}
-                style={inputStyle}
-                onFocus={focusStyle}
-                onBlur={blurStyle}
+                style={inputStyle} onFocus={focusStyle} onBlur={blurStyle}
               />
             </Field>
           </div>
@@ -264,100 +340,122 @@ export default function UploadForm() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }} className="form-two-col">
             <Field label="Sampling Rate" required>
               <input
-                type="text"
-                required
-                placeholder="e.g. 2048 Hz"
+                type="text" required placeholder="e.g. 2048 Hz"
                 value={form.samplingRate}
                 onChange={(e) => setField("samplingRate", e.target.value)}
-                style={inputStyle}
-                onFocus={focusStyle}
-                onBlur={blurStyle}
+                style={inputStyle} onFocus={focusStyle} onBlur={blurStyle}
               />
             </Field>
-
             <Field label="Duration" required>
               <input
-                type="text"
-                required
-                placeholder="e.g. 48 hours"
+                type="text" required placeholder="e.g. 48 hours"
                 value={form.duration}
                 onChange={(e) => setField("duration", e.target.value)}
-                style={inputStyle}
-                onFocus={focusStyle}
-                onBlur={blurStyle}
+                style={inputStyle} onFocus={focusStyle} onBlur={blurStyle}
               />
             </Field>
           </div>
+
+          {/* Tags */}
+          <Field label="Tags" hint="Comma-separated keywords researchers can search for">
+            <div style={{ position: "relative" }}>
+              <Hash size={14} style={{ position: "absolute", left: "0.85rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
+              <input
+                type="text"
+                placeholder="e.g. Motor Imagery, Neural Decoding, Rehabilitation"
+                value={form.tags}
+                onChange={(e) => setField("tags", e.target.value)}
+                style={{ ...inputStyle, paddingLeft: "2.5rem" }}
+                onFocus={focusStyle} onBlur={blurStyle}
+              />
+            </div>
+          </Field>
         </div>
       </FormSection>
 
-      {/* ── 3. Pricing ── */}
-      <FormSection icon={<DollarSign size={16} />} title="Pricing">
-        <Field label="Price (ETH)" required hint="Set the one-time access fee researchers pay to download your dataset.">
-          <div style={{ position: "relative" }}>
-            <input
-              type="number"
-              required
-              placeholder="0.05"
-              min="0"
-              step="0.001"
-              value={form.price}
-              onChange={(e) => setField("price", e.target.value)}
-              style={{ ...inputStyle, paddingLeft: "2.5rem" }}
-              onFocus={focusStyle}
-              onBlur={blurStyle}
-            />
-            <span style={{ position: "absolute", left: "0.9rem", top: "50%", transform: "translateY(-50%)", fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600, pointerEvents: "none" }}>
-              Ξ
-            </span>
-          </div>
-        </Field>
+      {/* ── 3. Pricing & Availability ── */}
+      <FormSection icon={<DollarSign size={16} />} title="Pricing &amp; Availability">
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+
+          <Field label="Price (ETH)" required hint="One-time access fee researchers pay to download your dataset.">
+            <div style={{ position: "relative" }}>
+              <input
+                type="number" required placeholder="0.05"
+                min="0" step="0.001"
+                value={form.price}
+                onChange={(e) => setField("price", e.target.value)}
+                style={{ ...inputStyle, paddingLeft: "2.5rem" }}
+                onFocus={focusStyle} onBlur={blurStyle}
+              />
+              <span style={{ position: "absolute", left: "0.9rem", top: "50%", transform: "translateY(-50%)", fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600, pointerEvents: "none" }}>
+                Ξ
+              </span>
+            </div>
+            {form.price && !isNaN(parseFloat(form.price)) && (
+              <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
+                ≈ ${Math.round(parseFloat(form.price) * ETH_USD_RATE).toLocaleString()} USD
+              </p>
+            )}
+          </Field>
+
+          <Field
+            label="Purchase Limit"
+            hint="Max number of researchers who can buy this dataset. Leave blank for unlimited."
+          >
+            <div style={{ position: "relative" }}>
+              <input
+                type="number"
+                placeholder="Leave blank for unlimited"
+                min="1"
+                step="1"
+                value={form.maxPurchases}
+                onChange={(e) => setField("maxPurchases", e.target.value)}
+                style={inputStyle}
+                onFocus={focusStyle} onBlur={blurStyle}
+              />
+            </div>
+            {form.maxPurchases && (
+              <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
+                Only <strong style={{ color: "var(--primary-bright)" }}>{form.maxPurchases}</strong> researcher{parseInt(form.maxPurchases) !== 1 ? "s" : ""} can purchase this dataset. When sold out, it will appear as <em>Sold Out</em>.
+              </p>
+            )}
+          </Field>
+        </div>
       </FormSection>
 
       {/* ── 4. Access Requirements ── */}
       <FormSection icon={<ShieldCheck size={16} />} title="Access Requirements">
         <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-
           <CheckField
             label="Require wallet verification"
             checked={form.requirements.walletVerification}
             onChange={(v) => setReq("walletVerification", v)}
           />
-
           <CheckField
             label="Require institution affiliation"
             checked={form.requirements.institutionRequired}
             onChange={(v) => setReq("institutionRequired", v)}
           />
-
           <Field label="Minimum ETH balance required" hint="Leave 0 for no minimum">
             <div style={{ position: "relative" }}>
               <input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0"
+                type="number" min="0" step="0.01" placeholder="0"
                 value={form.requirements.minEthBalance}
                 onChange={(e) => setReq("minEthBalance", e.target.value)}
                 style={{ ...inputStyle, paddingLeft: "2.5rem" }}
-                onFocus={focusStyle}
-                onBlur={blurStyle}
+                onFocus={focusStyle} onBlur={blurStyle}
               />
               <span style={{ position: "absolute", left: "0.9rem", top: "50%", transform: "translateY(-50%)", fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600, pointerEvents: "none" }}>
                 Ξ
               </span>
             </div>
           </Field>
-
           <Field label="Research purpose required" hint="e.g. Medical Research, Neuroscience. Leave blank for any.">
             <input
-              type="text"
-              placeholder="e.g. Medical Research"
+              type="text" placeholder="e.g. Medical Research"
               value={form.requirements.purposeRequired}
               onChange={(e) => setReq("purposeRequired", e.target.value)}
-              style={inputStyle}
-              onFocus={focusStyle}
-              onBlur={blurStyle}
+              style={inputStyle} onFocus={focusStyle} onBlur={blurStyle}
             />
           </Field>
         </div>
@@ -377,9 +475,7 @@ export default function UploadForm() {
         disabled={uploadState === "uploading" || !form.file}
         className="btn-primary btn-primary-hover"
         style={{
-          padding: "1rem 2rem",
-          fontSize: "0.95rem",
-          justifyContent: "center",
+          padding: "1rem 2rem", fontSize: "0.95rem", justifyContent: "center",
           opacity: !form.file ? 0.5 : 1,
           cursor: !form.file ? "not-allowed" : "pointer",
         }}
@@ -392,7 +488,7 @@ export default function UploadForm() {
         ) : (
           <>
             <Upload size={16} />
-            Upload to IPFS
+            Publish to Marketplace
           </>
         )}
       </button>
@@ -409,22 +505,9 @@ export default function UploadForm() {
 
 /* ── Shared sub-components ── */
 
-function FormSection({
-  icon, title, children,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  children: React.ReactNode;
-}) {
+function FormSection({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        background: "var(--bg-glass)",
-        border: "1px solid var(--border-subtle)",
-        borderRadius: "var(--radius-lg)",
-        overflow: "hidden",
-      }}
-    >
+    <div style={{ background: "var(--bg-glass)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", padding: "1rem 1.25rem", borderBottom: "1px solid var(--border-subtle)", background: "var(--bg-elevated)" }}>
         <span style={{ color: "var(--primary-bright)" }}>{icon}</span>
         <h3 style={{ fontFamily: "var(--font-display)", fontSize: "0.82rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--text-secondary)" }}>
@@ -436,14 +519,7 @@ function FormSection({
   );
 }
 
-function Field({
-  label, required, hint, children,
-}: {
-  label: string;
-  required?: boolean;
-  hint?: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
       <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "0.3rem" }}>
@@ -460,13 +536,7 @@ function Field({
   );
 }
 
-function CheckField({
-  label, checked, onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
+function CheckField({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label style={{ display: "flex", alignItems: "center", gap: "0.65rem", cursor: "pointer", userSelect: "none" }}>
       <div
