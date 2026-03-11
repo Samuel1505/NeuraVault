@@ -14,7 +14,7 @@ export const MOCK_BCI_RECORDS: BCIRecord[] = [
     samplingRate: '2048 Hz',
     channels: 256,
     price: '0.05',
-    priceUSD: '$182',
+    priceUSD: '$175',
     owner: '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b',
     ownerName: 'Dr. Sarah Chen',
     requirements: {
@@ -29,6 +29,8 @@ export const MOCK_BCI_RECORDS: BCIRecord[] = [
     verified: true,
     downloads: 34,
     status: 'available',
+    maxPurchases: 5,
+    purchaseCount: 0,
   },
   {
     id: 'bci-002',
@@ -43,7 +45,7 @@ export const MOCK_BCI_RECORDS: BCIRecord[] = [
     samplingRate: '1 Hz (TR=1000ms)',
     channels: 72,
     price: '0.12',
-    priceUSD: '$437',
+    priceUSD: '$420',
     owner: '0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c',
     ownerName: 'Prof. Marcus Reid',
     requirements: {
@@ -58,6 +60,8 @@ export const MOCK_BCI_RECORDS: BCIRecord[] = [
     verified: true,
     downloads: 19,
     status: 'available',
+    maxPurchases: 10,
+    purchaseCount: 0,
   },
   {
     id: 'bci-003',
@@ -66,13 +70,13 @@ export const MOCK_BCI_RECORDS: BCIRecord[] = [
     description:
       'Intracranial ECoG recordings from speech cortex during imagined and overt speech production. FDA-approved collection.',
     longDescription:
-      'This dataset contains electrocorticography (ECoG) recordings from 6 patients with pharmacologically refractory epilepsy who had subdural electrode grids placed for clinical monitoring. During clinical monitoring, patients participated in speech production tasks. The grid covered the lateral surface of the left hemisphere including Broca\'s area, primary motor cortex, and superior temporal gyrus. Data sampled at 2000 Hz. Includes imagined speech (covert) and overt speech conditions for phonemes, words, and sentences.',
+      "This dataset contains electrocorticography (ECoG) recordings from 6 patients with pharmacologically refractory epilepsy who had subdural electrode grids placed for clinical monitoring. During clinical monitoring, patients participated in speech production tasks. The grid covered the lateral surface of the left hemisphere including Broca's area, primary motor cortex, and superior temporal gyrus. Data sampled at 2000 Hz. Includes imagined speech (covert) and overt speech conditions for phonemes, words, and sentences.",
     dataPoints: 4_800_000,
     duration: '12 hours',
     samplingRate: '2000 Hz',
     channels: 128,
     price: '0.25',
-    priceUSD: '$910',
+    priceUSD: '$875',
     owner: '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d',
     ownerName: 'Dr. Yuki Tanaka',
     requirements: {
@@ -81,12 +85,14 @@ export const MOCK_BCI_RECORDS: BCIRecord[] = [
       purposeRequired: 'Speech-BCI Development',
       walletVerification: true,
     },
-    tags: ['Speech', 'Broca\'s Area', 'Intracranial', 'Language'],
+    tags: ["Speech", "Broca's Area", 'Intracranial', 'Language'],
     ipfsHash: 'QmZh5tY1oNmR0xVrP4bA9jD6eF8gC3lI7uM2wK1qO5oT',
     uploadedAt: '2025-12-10',
     verified: true,
     downloads: 8,
     status: 'restricted',
+    maxPurchases: 3,
+    purchaseCount: 0,
   },
   {
     id: 'bci-004',
@@ -101,7 +107,7 @@ export const MOCK_BCI_RECORDS: BCIRecord[] = [
     samplingRate: '1000 Hz',
     channels: 306,
     price: '0.08',
-    priceUSD: '$291',
+    priceUSD: '$280',
     owner: '0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e',
     ownerName: 'Dr. Amara Osei',
     requirements: {
@@ -116,6 +122,8 @@ export const MOCK_BCI_RECORDS: BCIRecord[] = [
     verified: true,
     downloads: 52,
     status: 'available',
+    maxPurchases: undefined,
+    purchaseCount: 0,
   },
   {
     id: 'bci-005',
@@ -130,7 +138,7 @@ export const MOCK_BCI_RECORDS: BCIRecord[] = [
     samplingRate: '2000 Hz',
     channels: 16,
     price: '0.03',
-    priceUSD: '$109',
+    priceUSD: '$105',
     owner: '0x5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f',
     ownerName: 'Eng. Fatima Al-Rashid',
     requirements: {
@@ -145,6 +153,8 @@ export const MOCK_BCI_RECORDS: BCIRecord[] = [
     verified: false,
     downloads: 71,
     status: 'available',
+    maxPurchases: undefined,
+    purchaseCount: 0,
   },
   {
     id: 'bci-006',
@@ -159,7 +169,7 @@ export const MOCK_BCI_RECORDS: BCIRecord[] = [
     samplingRate: '10 Hz',
     channels: 52,
     price: '0.02',
-    priceUSD: '$73',
+    priceUSD: '$70',
     owner: '0x6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a',
     ownerName: 'Dr. Lena Müller',
     requirements: {
@@ -174,5 +184,7 @@ export const MOCK_BCI_RECORDS: BCIRecord[] = [
     verified: true,
     downloads: 28,
     status: 'available',
+    maxPurchases: undefined,
+    purchaseCount: 0,
   },
 ];
