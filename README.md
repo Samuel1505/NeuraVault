@@ -7,15 +7,116 @@ The repository combines smart contracts, backend services, and a web app into on
 
 ---
 
-## What This Project Solves
+## Problem Statement
 
-BCI data is highly sensitive, but current data pipelines are often centralized and opaque.
-NeuralVault is designed to improve:
+With companies like Neuralink and Synchron advancing clinical BCI trials, neural data privacy has become critical. Current systems store BCI data in centralized databases controlled by corporations or research institutions. 
 
-- **Data sovereignty**: contributors control who can access their data
-- **Consent transparency**: access decisions are explicit and auditable
-- **Research collaboration**: researchers can discover and request access with defined flows
-- **Economic fairness**: contributors can be compensated through programmable payment logic
+**Key Issues:**
+- Patients lack control over who accesses their neural recordings
+- No transparency in how data is used
+- Cannot monetize contributions to research
+- Serious ethical concerns around neural data ownership and consent
+- Risk of neural data breaches and unauthorized access
+- No standardized consent mechanisms for neural data sharing
+
+---
+
+## Solution Overview
+
+The Neural Privacy Layer creates a decentralized, privacy-preserving infrastructure that:
+
+1. **Data Sovereignty**: Users maintain cryptographic control over their BCI data
+2. **Privacy-Preserving Research**: Enable research collaboration without exposing raw neural data
+3. **Consent Management**: Granular, revocable consent mechanisms
+4. **Data Monetization**: Fair compensation for data contributions
+5. **Interoperability**: Standard protocols for BCI data exchange
+6. **Auditability**: Transparent, immutable access logs
+
+---
+
+## System Architecture
+
+```mermaid
+graph TB
+    subgraph "User Layer"
+        BCI[BCI Device]
+        LocalNode[Local Privacy Node]
+        Wallet[Identity Wallet]
+    end
+    
+    subgraph "Decentralized Storage Layer"
+        IPFS[IPFS/Filecoin]
+        Encryption[End-to-End Encryption]
+    end
+    
+    subgraph "Blockchain Layer"
+        SmartContracts[Smart Contracts]
+        AccessControl[Access Control Registry]
+        ConsentLog[Consent Ledger]
+        Payments[Payment Distribution]
+    end
+    
+    subgraph "Privacy Layer"
+        ZKP[Zero-Knowledge Proofs]
+        FHE[Federated Learning Engine]
+        DifferentialPrivacy[Differential Privacy Module]
+    end
+    
+    subgraph "Research Layer"
+        ResearchPortal[Research Portal]
+        DataMarketplace[Data Marketplace]
+        Analytics[Privacy-Preserving Analytics]
+    end
+    
+    BCI --> LocalNode
+    LocalNode --> Encryption
+    Encryption --> IPFS
+    LocalNode --> Wallet
+    Wallet --> SmartContracts
+    SmartContracts --> AccessControl
+    SmartContracts --> ConsentLog
+    SmartContracts --> Payments
+    IPFS --> ZKP
+    ZKP --> FHE
+    FHE --> Analytics
+    AccessControl --> ResearchPortal
+    ConsentLog --> DataMarketplace
+    Analytics --> ResearchPortal
+```
+
+---
+
+## Core Components
+
+### 1. Local Privacy Node
+An edge computing node that processes BCI data locally. It handles real-time ingestion, anonymization, and encryption before any data leaves the user's control.
+
+### 2. Decentralized Storage (IPFS/Filecoin)
+Encrypted BCI data is stored using content-addressed protocols, ensuring immutability and redundancy without relying on centralized servers.
+
+### 3. Blockchain Layer (Smart Contracts)
+- **Identity Registry**: Sovereign identity management for data owners.
+- **Consent Manager**: Granular, revocable permissions for data access.
+- **Payment Distributor**: Transparent escrow and automated compensation for data contributions.
+
+### 4. Privacy-Preserving Computation
+Utilizes **Zero-Knowledge Proofs (ZKP)** and **Differential Privacy** to allow researchers to verify data traits and run analytics without ever seeing the raw neural signals.
+
+---
+
+## User Flows
+
+### 1. Data Owner Flow
+- **Register**: Connect wallet and create a sovereign identity.
+- **Upload**: Securely upload BCI datasets; data is encrypted locally and pinned to IPFS.
+- **Control**: Set granular consent preferences and monitor access requests.
+- **Earn**: Receive automated compensation when research requests are approved and data is accessed.
+
+### 2. Researcher Flow
+- **Discover**: Browse the marketplace for available neural datasets via metadata.
+- **Request**: Submit access requests for specific data types with research proposals.
+- **Negotiate**: Agree on terms and trigger the escrow-based payment flow.
+- **Access**: Securely access and analyze data within the privacy-preserving framework.
 
 ---
 
